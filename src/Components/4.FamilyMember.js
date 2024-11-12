@@ -5,15 +5,15 @@ export const FamilyMembers = ({ FamilyTree = [], onAddPerson }) => {
   const [translate, setTranslate] = useState({ x: 0, y: 0 });
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
 
-  // Get container dimensions and adjust tree position
   const containerRef = useCallback(containerElem => {
     if (containerElem !== null) {
       const { width, height } = containerElem.getBoundingClientRect();
       setDimensions({ width, height });
-      setTranslate({ x: width / 2, y: height / 10 }); // Center the tree in the container
+      setTranslate({ x: width / 2, y: height / 4 }); // Adjusted y position for better initial view
     }
   }, []);
 
+  // Move the data conversion function definition up
   const convertToTreeData = (members) => {
     if (!Array.isArray(members) || members.length === 0) {
       return [];
@@ -31,6 +31,7 @@ export const FamilyMembers = ({ FamilyTree = [], onAddPerson }) => {
     }));
   };
 
+  // Create treeData before using it
   const treeData = convertToTreeData(FamilyTree);
 
   const handleAddNode = (nodeDatum, type) => {
@@ -52,8 +53,6 @@ export const FamilyMembers = ({ FamilyTree = [], onAddPerson }) => {
           Gothram: gothram,
           Origin: origin
         };
-
-        // Call the parent function to update the tree with the new person
         onAddPerson(newPerson, nodeDatum.attributes.id, type);
       }
     }
@@ -65,56 +64,66 @@ export const FamilyMembers = ({ FamilyTree = [], onAddPerson }) => {
     foreignObjectProps
   }) => (
     <g>
-      <circle r={20} fill="#4299e1" />
-      <foreignObject {...foreignObjectProps}>
-        <div className="absolute p-4 bg-white rounded-lg shadow-lg border border-gray-200"
-             style={{
-               width: '400px', // Increased width to ensure content fits
-               height: 'auto', // Let the height grow based on content
-               maxHeight: '400px', // Limit the height of nodes
-               transform: 'translate(-50%, -50%)',
-               overflow: 'auto', // Enable scrolling if content overflows
-             }}>
+      <circle r={15} fill="#4299e1" />
+      <foreignObject
+        {...foreignObjectProps}
+        style={{
+          overflow: 'visible', // Changed to visible to prevent content clipping
+          pointerEvents: 'auto' // Ensures buttons are clickable
+        }}
+      >
+        <div 
+          className="node-container bg-white rounded-lg shadow-lg border border-gray-200"
+          style={{
+            position: 'relative',
+            left: '-200px', // Center the card relative to the node
+            top: '-140px', // Adjust vertical position
+            width: '400px',
+            minHeight: '280px',
+            padding: '1rem',
+            zIndex: 1 // Ensure nodes are above the lines
+          }}
+        >
           <div className="text-center">
-            <h3 className="font-bold text-lg">{nodeDatum.name}</h3>
-            <div className="text-sm text-gray-600">
-              {nodeDatum.attributes?.Gothram && `Gothram: ${nodeDatum.attributes.Gothram}`}<br />
-              {nodeDatum.attributes?.Origin && `Origin: ${nodeDatum.attributes.Origin}`}
+            <h3 className="font-bold text-lg mb-2">{nodeDatum.name}</h3>
+            <div className="text-sm text-gray-600 mb-4">
+              {nodeDatum.attributes?.Gothram && <div>Gothram: {nodeDatum.attributes.Gothram}</div>}
+              {nodeDatum.attributes?.Origin && <div>Origin: {nodeDatum.attributes.Origin}</div>}
             </div>
-            <div className="flex flex-col gap-2 mt-2"> {/* Stack the buttons vertically */}
+            <div className="flex flex-col gap-3">
               <button
-                className="bg-purple-500 text-white px-4 py-2 rounded text-sm hover:bg-purple-600"
+                className="w-full bg-purple-500 text-white px-4 py-2 rounded hover:bg-purple-600 transition-colors"
                 onClick={(e) => {
                   e.stopPropagation();
-                  handleAddNode(nodeDatum, 'parent'); // Add Parent
+                  handleAddNode(nodeDatum, 'parent');
                 }}
               >
                 Add Parent
               </button>
               <button
-                className="bg-green-500 text-white px-4 py-2 rounded text-sm hover:bg-green-600"
+                className="w-full bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition-colors"
                 onClick={(e) => {
                   e.stopPropagation();
-                  handleAddNode(nodeDatum, 'child'); // Add Child
+                  handleAddNode(nodeDatum, 'child');
                 }}
               >
                 Add Child
               </button>
               <button
-                className="bg-yellow-500 text-white px-4 py-2 rounded text-sm hover:bg-yellow-600"
+                className="w-full bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600 transition-colors"
                 onClick={(e) => {
                   e.stopPropagation();
-                  handleAddNode(nodeDatum, 'sibling'); // Add Sibling
+                  handleAddNode(nodeDatum, 'sibling');
                 }}
               >
                 Add Sibling
               </button>
               {nodeDatum.children && nodeDatum.children.length > 0 && (
                 <button
-                  className="bg-blue-500 text-white px-4 py-2 rounded text-sm hover:bg-blue-600"
+                  className="w-full bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition-colors"
                   onClick={(e) => {
                     e.stopPropagation();
-                    toggleNode(); // Expand or Collapse the node
+                    toggleNode();
                   }}
                 >
                   {nodeDatum.__rd3t.collapsed ? 'Expand' : 'Collapse'}
@@ -138,18 +147,19 @@ export const FamilyMembers = ({ FamilyTree = [], onAddPerson }) => {
             renderForeignObjectNode({
               ...rd3tProps,
               foreignObjectProps: {
-                width: 400, // Increased width for better content fitting
-                height: 280, // Increased height for the node
-                x: -50, // Center node horizontally
-                y: -40 // Center node vertically
+                width: 400,
+                height: 280,
+                x: 0,
+                y: 0
               }
             })
           }
           pathFunc="step"
-          separation={{ siblings: 3, nonSiblings: 3.5 }} // Increase separation for better visibility
-          zoom={0.75} // Adjust zoom to fit the tree inside the screen
+          separation={{ siblings: 4, nonSiblings: 4.5 }}
+          zoom={0.6}
           enableLegacyTransitions={true}
           transitionDuration={800}
+          nodeSize={{ x: 400, y: 400 }}
         />
       )}
     </div>
