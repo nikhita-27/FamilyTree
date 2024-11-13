@@ -5,24 +5,14 @@ import { Register } from "./Components/1.Register";
 import { Login } from "./Components/2.Login";
 
 const App = () => {
+  // Initialize arrays with empty arrays instead of undefined
   const [FamilyTree, setFamilyTree] = useState([]);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [RegisteredUsers, setRegisteredUsers] = useState([]);
 
-  const findMemberById = (tree, id) => {
-    for (let member of tree) {
-      if (member.id === id) return member;
-      if (member.children) {
-        const found = findMemberById(member.children, id);
-        if (found) return found;
-      }
-    }
-    return null;
-  };
-
   const handleRegister = (userData) => {
-    setRegisteredUsers([...RegisteredUsers, userData]);
-    alert("Registration Successfully!");
+    setRegisteredUsers((prev) => [...prev, userData]);
+    alert("Registration Successful!");
   };
 
   const handleLogin = (email, password) => {
@@ -37,7 +27,27 @@ const App = () => {
     }
   };
 
-  const handleAddMember = (newPerson, memberId = null, type = null) => {
+  // Helper function to deep clone tree structure
+  const deepClone = (obj) => JSON.parse(JSON.stringify(obj));
+
+  // Helper function to find a node by ID anywhere in the tree
+  const findNodeById = (tree, id) => {
+    for (let i = 0; i < tree.length; i++) {
+      if (tree[i].id === id) {
+        return { node: tree[i], index: i, parent: null };
+      }
+      if (tree[i].children && tree[i].children.length > 0) {
+        for (let j = 0; j < tree[i].children.length; j++) {
+          if (tree[i].children[j].id === id) {
+            return { node: tree[i].children[j], index: j, parent: tree[i] };
+          }
+        }
+      }
+    }
+    return { node: null, index: -1, parent: null };
+  };
+
+  const handleAddMember = (newPerson, targetId = null, type = null) => {
     const newMember = {
       ...newPerson,
       id: `${newPerson.Name}-${newPerson.Surname}-${Date.now()}`,
@@ -45,43 +55,60 @@ const App = () => {
     };
 
     setFamilyTree((prevTree) => {
-      if (!memberId) {
-        return [...prevTree, newMember]; // Add root member
+      // Always work with a copy of the previous tree
+      let updatedTree = deepClone(prevTree);
+
+      // If no target ID, add as root
+      if (!targetId) {
+        return [...updatedTree, newMember];
       }
 
-      const updatedTree = JSON.parse(JSON.stringify(prevTree));
+      const { node: targetNode, index: targetIndex, parent: parentNode } = findNodeById(updatedTree, targetId);
 
-      if (type === "parent") {
-        const currentMember = findMemberById(updatedTree, memberId);
-        if (currentMember) {
-          newMember.children = [currentMember];
-          const replaceNodeInTree = (tree, oldNode, newNode) => {
-            for (let i = 0; i < tree.length; i++) {
-              if (tree[i].id === oldNode.id) {
-                tree[i] = newNode;
-                return true;
-              }
-              if (tree[i].children) {
-                if (replaceNodeInTree(tree[i].children, oldNode, newNode)) {
-                  return true;
-                }
-              }
-            }
-            return false;
+      if (!targetNode) {
+        console.error("Target node not found");
+        return updatedTree;
+      }
+
+      switch (type) {
+        case "parent": {
+          const newParentMember = {
+            ...newMember,
+            children: [deepClone(targetNode)]
           };
-          replaceNodeInTree(updatedTree, currentMember, newMember);
+
+          if (!parentNode) {
+            // Target is a root node
+            updatedTree[targetIndex] = newParentMember;
+          } else {
+            // Replace target in parent's children
+            parentNode.children[targetIndex] = newParentMember;
+          }
+          break;
         }
-      } else if (type === "child") {
-        const parent = findMemberById(updatedTree, memberId);
-        if (parent) {
-          if (!parent.children) parent.children = [];
-          parent.children.push(newMember);
+
+        case "child": {
+          if (!targetNode.children) {
+            targetNode.children = [];
+          }
+          targetNode.children.push(newMember);
+          break;
         }
-      } else if (type === "sibling") {
-        const parent = findMemberById(updatedTree, memberId);
-        if (parent) {
-          parent.children.push(newMember);
+
+        case "sibling": {
+          if (!parentNode) {
+            // Target is a root node, add to root level
+            updatedTree.push(newMember);
+          } else {
+            // Add to parent's children
+            parentNode.children.push(newMember);
+          }
+          break;
         }
+
+        default:
+          console.error("Invalid relationship type");
+          return updatedTree;
       }
 
       return updatedTree;
@@ -109,7 +136,6 @@ const App = () => {
         ) : (
           <div>
             <h2 className="text-xl font-semibold mb-6 text-center">Welcome! You are logged in.</h2>
-
             <div className="text-center mb-6">
               <button
                 onClick={() => {
@@ -132,7 +158,7 @@ const App = () => {
               </button>
             </div>
 
-            <div className="bg-white rounded-lg shadow-lg p-4 min-h-[600px]">
+            <div className="bg-white rounded-lg shadow-lg p-4 min-h-[800px]">
               <FamilyMembers FamilyTree={FamilyTree} onAddPerson={handleAddMember} />
             </div>
           </div>

@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 
-const I_Person = ({ onAddPerson, parentId }) => {
+const I_Person = ({ onAddPerson, parentId, type }) => {
   const [Surname, setSurname] = useState("");
   const [Gothram, setGothram] = useState("");
   const [Name, setName] = useState("");
@@ -22,7 +22,7 @@ const I_Person = ({ onAddPerson, parentId }) => {
     };
 
     // Call the parent function to add the member
-    onAddPerson(newPerson);
+    onAddPerson(newPerson, parentId, type);
 
     // Reset the input fields
     setSurname("");
@@ -33,6 +33,7 @@ const I_Person = ({ onAddPerson, parentId }) => {
 
   return (
     <div>
+      <h3>Add New {type === "parent" ? "Parent" : type === "child" ? "Child" : "Sibling"}</h3>
       <form onSubmit={handleSubmit}>
         <label>
           Surname:
