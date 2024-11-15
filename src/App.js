@@ -5,7 +5,6 @@ import { Register } from "./Components/1.Register";
 import { Login } from "./Components/2.Login";
 
 const App = () => {
-  // Initialize arrays with empty arrays instead of undefined
   const [FamilyTree, setFamilyTree] = useState([]);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [RegisteredUsers, setRegisteredUsers] = useState([]);
@@ -27,10 +26,8 @@ const App = () => {
     }
   };
 
-  // Helper function to deep clone tree structure
   const deepClone = (obj) => JSON.parse(JSON.stringify(obj));
 
-  // Helper function to find a node by ID anywhere in the tree
   const findNodeById = (tree, id) => {
     for (let i = 0; i < tree.length; i++) {
       if (tree[i].id === id) {
@@ -40,6 +37,11 @@ const App = () => {
         for (let j = 0; j < tree[i].children.length; j++) {
           if (tree[i].children[j].id === id) {
             return { node: tree[i].children[j], index: j, parent: tree[i] };
+          }
+          // Search deeper in the tree
+          const deepSearch = findNodeById([tree[i].children[j]], id);
+          if (deepSearch.node) {
+            return deepSearch;
           }
         }
       }
@@ -52,65 +54,56 @@ const App = () => {
       ...newPerson,
       id: `${newPerson.Name}-${newPerson.Surname}-${Date.now()}`,
       children: [],
+      parents: [], // Add parents array to track multiple parents
     };
-
+  
     setFamilyTree((prevTree) => {
-      // Always work with a copy of the previous tree
       let updatedTree = deepClone(prevTree);
-
-      // If no target ID, add as root
+  
       if (!targetId) {
         return [...updatedTree, newMember];
       }
-
-      const { node: targetNode, index: targetIndex, parent: parentNode } = findNodeById(updatedTree, targetId);
-
-      if (!targetNode) {
-        console.error("Target node not found");
-        return updatedTree;
-      }
-
-      switch (type) {
-        case "parent": {
-          const newParentMember = {
-            ...newMember,
-            children: [deepClone(targetNode)]
-          };
-
-          if (!parentNode) {
-            // Target is a root node
-            updatedTree[targetIndex] = newParentMember;
-          } else {
-            // Replace target in parent's children
-            parentNode.children[targetIndex] = newParentMember;
+  
+      const updateNode = (nodes) => {
+        for (let i = 0; i < nodes.length; i++) {
+          if (nodes[i].id === targetId) {
+            switch (type) {
+              case "parent": {
+                // Instead of replacing, add to parents array
+                if (!nodes[i].parents) {
+                  nodes[i].parents = [];
+                }
+                nodes[i].parents.push(newMember);
+                return true;
+              }
+              case "child": {
+                if (!nodes[i].children) {
+                  nodes[i].children = [];
+                }
+                nodes[i].children.push(newMember);
+                return true;
+              }
+              case "sibling": {
+                nodes.push(newMember);
+                return true;
+              }
+              case "spouse": {
+                nodes[i].spouse = newMember;
+                return true;
+              }
+              default:
+                return false;
+            }
           }
-          break;
-        }
-
-        case "child": {
-          if (!targetNode.children) {
-            targetNode.children = [];
+          if (nodes[i].children) {
+            const foundInChildren = updateNode(nodes[i].children);
+            if (foundInChildren) return true;
           }
-          targetNode.children.push(newMember);
-          break;
         }
-
-        case "sibling": {
-          if (!parentNode) {
-            // Target is a root node, add to root level
-            updatedTree.push(newMember);
-          } else {
-            // Add to parent's children
-            parentNode.children.push(newMember);
-          }
-          break;
-        }
-
-        default:
-          console.error("Invalid relationship type");
-          return updatedTree;
-      }
-
+        return false;
+      };
+  
+      updateNode(updatedTree);
       return updatedTree;
     });
   };
